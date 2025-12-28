@@ -141,7 +141,7 @@ $total_pages = ceil($total_rows / $limit);
 
 <!-- Add/Edit Modal (existing code) -->
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 <script>
 $(document).ready(function() {
     let debounceTimer;

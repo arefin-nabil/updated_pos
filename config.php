@@ -7,12 +7,12 @@ define('DB_PASS', '');
 define('DB_NAME', 'pos_systems');
 
 // App Settings
-define('APP_NAME', 'Barmi Discount Shop');
+define('APP_NAME', 'Beetech Mini Super Shop');
 define('CURRENCY', '৳');
 define('TIMEZONE', 'Asia/Dhaka');
 
 // Business Logic Settings
-define('BEETECH_PROFIT_SHARE_PERCENT', 0.50); // 50% of profit goes to Beetech Points calculation
+
 
 // Error Reporting (Turn off for public production, On for dev)
 error_reporting(E_ALL);

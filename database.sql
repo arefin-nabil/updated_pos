@@ -17,6 +17,7 @@ CREATE TABLE `users` (
   `password` varchar(255) NOT NULL,
   `full_name` varchar(100) NOT NULL,
   `role` enum('admin','salesman') NOT NULL DEFAULT 'salesman',
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`)
@@ -24,12 +25,12 @@ CREATE TABLE `users` (
 
 --
 -- Dumping data for table `users`
--- Default admin: admin / password123 (Needs to be hashed manually or via registration script, will insert a default one)
--- Hash for 'password123' is '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi' (example, will use a real one in PHP setup if needed, but here is raw)
+-- Default admin: admin / password123
+--
 
-INSERT INTO `users` (`username`, `password`, `full_name`, `role`) VALUES
-('admin', '$2y$10$0z7/GZEMaaVydT2sMVf3xeElxavNgSkjUG5SCO1rcO3Re4VokOvMi', 'Super Admin', 'admin'),
-('cashier', '$2y$10$YourHashedPasswordHereOrChangeMe', 'Salesman 1', 'salesman');
+INSERT INTO `users` (`username`, `password`, `full_name`, `role`, `is_deleted`) VALUES
+('admin', '$2y$10$0z7/GZEMaaVydT2sMVf3xeElxavNgSkjUG5SCO1rcO3Re4VokOvMi', 'Super Admin', 'admin', 0),
+('cashier', '$2y$10$YourHashedPasswordHereOrChangeMe', 'Salesman 1', 'salesman', 0);
 
 -- --------------------------------------------------------
 
@@ -63,10 +64,12 @@ CREATE TABLE `products` (
   `sell_price` decimal(10,2) NOT NULL,
   `stock_qty` int(11) NOT NULL DEFAULT 0,
   `alert_threshold` int(11) NOT NULL DEFAULT 5,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
   `image` varchar(255) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
-  UNIQUE KEY `barcode` (`barcode`)
+  UNIQUE KEY `barcode` (`barcode`),
+  KEY `is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
@@ -81,7 +84,7 @@ CREATE TABLE `sales` (
   `customer_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `total_amount` decimal(10,2) NOT NULL,
-  `final_discount_amount` decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Beetech Discount Total',
+  `final_discount_amount` decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Total Discount Given',
   `points_earned` decimal(10,2) NOT NULL DEFAULT 0.00,
   `points_given` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -109,6 +112,25 @@ CREATE TABLE `sale_items` (
   KEY `sale_id` (`sale_id`),
   KEY `product_id` (`product_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `expenses`
+--
+
+CREATE TABLE `expenses` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `title` varchar(100) NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `expense_date` date NOT NULL,
+  `description` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `expense_date` (`expense_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
 
 --
 -- Constraints for dumped tables
