@@ -30,7 +30,9 @@ $page_title = $page_title ?? APP_NAME;
     <!-- Sidebar -->
     <nav class="sidebar glass-panel border-0 m-0 rounded-0">
         <div class="mb-5 px-2">
-            <h4 class="fw-bold text-primary"><i class="fas fa-shopping-bag me-2"></i><?php echo APP_NAME; ?></h4>
+            <a href="dashboard.php" class="text-decoration-none">
+                <h4 class="fw-bold text-primary"><i class="fas fa-shopping-bag me-2"></i><?php echo APP_NAME; ?></h4>
+            </a>
         </div>
 
         <div class="nav flex-column">
@@ -57,6 +59,10 @@ $page_title = $page_title ?? APP_NAME;
             <?php if(is_admin()): ?>
             <div class="my-3 px-3 text-uppercase text-xs text-secondary fw-bold" style="font-size: 0.75rem;">Admin</div>
             
+            <a href="expenses.php" class="nav-link <?php echo (($current_page ?? '') == 'expenses') ? 'active' : ''; ?>">
+                <i class="fas fa-file-invoice-dollar"></i> Expenses
+            </a>
+
             <a href="products.php" class="nav-link <?php echo (($current_page ?? '') == 'products') ? 'active' : ''; ?>">
                 <i class="fas fa-box"></i> Products
             </a>

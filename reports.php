@@ -32,60 +32,7 @@ if (!empty($user_id)) {
     $params['uid'] = $user_id;
 }
 
-// Reports query grouped by date
-$sql = "SELECT 
-            DATE_FORMAT(s.created_at, '" . ($report_type == 'monthly' ? '%Y-%m-01' : '%Y-%m-%d') . "') as date_group,
-            COUNT(DISTINCT s.id) as total_invoices,
-            SUM(s.total_amount) as revenue,
-            SUM(s.final_discount_amount) as discount_given,
-            SUM((si.unit_sell_price - si.unit_buy_price) * si.quantity) as gross_profit
-        FROM sales s
-        JOIN sale_items si ON s.id = si.sale_id
-        WHERE $where_sql
-        GROUP BY date_group
-        ORDER BY date_group DESC";
-
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$reports = $stmt->fetchAll();
-
-// 2. Expenses Data (Filtered by date only, User filter ignores expenses usually unless expenses have user_id, which they don't in current schema)
-// If User ID is selected, we might want to show Net Profit based only on that user's sales, but expenses are usually store-wide.
-// Standard practice: If filtering by user, Net Profit is ambiguous. We will subtraction expenses regardless or show a note.
-// Let's subtract global expenses for the period to keep "Net Profit" meaning Store Net Profit if no user selected.
-// If user selected, maybe just show User's Contribution? 
-// Requirements say "Net Profit = Total Profit - Beetech Given - Expenses".
-// I will fetch total expenses for the period.
-
-$ex_params = ['start' => $start_date, 'end' => $end_date];
-$ex_sql = "SELECT SUM(amount) FROM expenses WHERE expense_date BETWEEN :start AND :end";
-$ex_stmt = $pdo->prepare($ex_sql);
-$ex_stmt->execute($ex_params);
-$total_period_expenses = $ex_stmt->fetchColumn() ?: 0;
-
-
-// Calculate Totals for Footer
-$grand_total_revenue = 0;
-$grand_total_profit = 0;
-$grand_total_invoices = 0;
-$grand_total_beetech = 0;
-
-foreach ($reports as $r) {
-    $grand_total_revenue += $r['revenue'];
-    $grand_total_profit += $r['gross_profit']; // This is Gross Profit from items
-    $grand_total_invoices += $r['total_invoices'];
-    // Note: s.final_discount_amount is in sales table. 
-    // The query sums s.final_discount_amount BUT since we join sale_items, we get rows per item.
-    // Summing s.final_discount_amount in a JOIN sale_items will multiply discount by # of items!
-    // ERROR in SQL above.
-    // FIX: separate queries or smarter aggregation.
-}
-
-// FIXING QUERY:
-// We need to aggregate Sales separately from Items to get accurate Invoice-level sums (Revenue, Discount)
-// and Item-level sums (Gross Profit).
-// Or just use subquery.
-
+// Fixed Query for Daily Aggregates
 $sql_fixed = "
     SELECT 
         date_group,
@@ -110,6 +57,20 @@ $sql_fixed = "
 $stmt = $pdo->prepare($sql_fixed);
 $stmt->execute($params);
 $reports = $stmt->fetchAll();
+
+// 2. Fetch All Invoices for these dates (for expansion)
+// To verify "No missing invoices", we fetch all sales in this range ordered by date
+$inv_sql = "SELECT s.*, DATE_FORMAT(s.created_at, '" . ($report_type == 'monthly' ? '%Y-%m-01' : '%Y-%m-%d') . "') as date_group FROM sales s WHERE $where_sql ORDER BY s.created_at DESC";
+$inv_stmt = $pdo->prepare($inv_sql);
+$inv_stmt->execute($params);
+$all_invoices = $inv_stmt->fetchAll(PDO::FETCH_GROUP); // Group by date_group PHP side
+
+// 3. Expenses Data
+$ex_params = ['start' => $start_date, 'end' => $end_date];
+$ex_sql = "SELECT SUM(amount) FROM expenses WHERE expense_date BETWEEN :start AND :end";
+$ex_stmt = $pdo->prepare($ex_sql);
+$ex_stmt->execute($ex_params);
+$total_period_expenses = $ex_stmt->fetchColumn() ?: 0;
 
 // Recalculate Totals
 $grand_total_revenue = 0;
@@ -154,17 +115,6 @@ $grand_net_profit = $grand_total_profit - $grand_total_beetech - $total_period_e
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label small fw-bold text-secondary">Salesman</label>
-                         <select name="user_id" class="form-select">
-                             <option value="">All</option>
-                             <?php foreach($users_list as $u): ?>
-                                <option value="<?php echo $u['id']; ?>" <?php echo $user_id == $u['id'] ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars(ucfirst($u['username'])); ?>
-                                </option>
-                             <?php endforeach; ?>
-                         </select>
-                    </div>
-                    <div class="col-md-2">
                         <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-2"></i> Filter</button>
                     </div>
                 </form>
@@ -172,10 +122,10 @@ $grand_net_profit = $grand_total_profit - $grand_total_beetech - $total_period_e
         </div>
     </div>
 
-    <!-- Summary Cards - Single Row 5 Columns -->
+    <!-- Summary Cards -->
     <div class="col-12 mb-4">
         <div class="row row-cols-1 row-cols-md-5 g-3">
-            <!-- Revenue -->
+             <!-- Revenue -->
             <div class="col">
                 <div class="card bg-primary text-white border-0 h-100 shadow-sm">
                     <div class="card-body">
@@ -236,6 +186,7 @@ $grand_net_profit = $grand_total_profit - $grand_total_beetech - $total_period_e
                     <table class="table table-hover align-middle">
                         <thead class="bg-light">
                             <tr>
+                                <th style="width: 50px;"></th> <!-- Expand Icon -->
                                 <th>Date / Period</th>
                                 <th class="text-center">Invoices</th>
                                 <th class="text-end">Revenue</th>
@@ -245,17 +196,60 @@ $grand_net_profit = $grand_total_profit - $grand_total_beetech - $total_period_e
                         </thead>
                         <tbody>
                             <?php if(empty($reports)): ?>
-                                <tr><td colspan="5" class="text-center py-4 text-muted">No data found for selected period</td></tr>
+                                <tr><td colspan="6" class="text-center py-4 text-muted">No data found for selected period</td></tr>
                             <?php else: ?>
-                                <?php foreach($reports as $row): ?>
-                                <tr>
+                                <?php foreach($reports as $index => $row): 
+                                    $date_key = $row['date_group'];
+                                    $day_invoices = $all_invoices[$date_key] ?? [];
+                                ?>
+                                <tr class="cursor-pointer" onclick="toggleDetails('details-<?php echo $index; ?>')">
+                                    <td class="text-center text-primary"><i class="fas fa-chevron-right transition-transform" id="icon-details-<?php echo $index; ?>"></i></td>
                                     <td class="fw-bold text-primary">
-                                        <?php echo date('d M Y', strtotime($row['date_group'])); ?>
+                                        <?php echo date(($report_type == 'monthly' ? 'M Y' : 'd M Y'), strtotime($row['date_group'])); ?>
                                     </td>
                                     <td class="text-center"><?php echo $row['total_invoices']; ?></td>
                                     <td class="text-end fw-bold"><?php echo format_money($row['revenue']); ?></td>
                                     <td class="text-end text-success"><?php echo format_money($row['gross_profit']); ?></td>
                                     <td class="text-end text-warning"><?php echo format_money($row['discount_given']); ?></td>
+                                </tr>
+                                <!-- Expanded Row -->
+                                <tr id="details-<?php echo $index; ?>" class="d-none bg-light">
+                                    <td colspan="6" class="p-3">
+                                        <div class="card border-0 shadow-sm">
+                                            <div class="card-body p-0">
+                                                <table class="table table-sm mb-0">
+                                                    <thead class="table-dark">
+                                                        <tr>
+                                                            <th class="ps-3">Invoice #</th>
+                                                            <th>Time</th>
+                                                            <th class="text-end">Purchase Amount</th>
+                                                            <th class="text-end">Discount/Points</th>
+                                                            <th class="text-end pe-3">Net Amount</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <?php if(empty($day_invoices)): ?>
+                                                            <tr><td colspan="5" class="text-center">No details available</td></tr>
+                                                        <?php else: ?>
+                                                            <?php foreach($day_invoices as $inv): 
+                                                                $net = $inv['total_amount'] - $inv['final_discount_amount']; // Net cash received technically? Or user meant something else. Usually Net = Total - Discount.
+                                                            ?>
+                                                            <tr>
+                                                                <td class="ps-3 font-monospace">
+                                                                    <a href="invoice.php?id=<?php echo $inv['id']; ?>" target="_blank"><?php echo $inv['invoice_no']; ?></a>
+                                                                </td>
+                                                                <td class="small text-secondary"><?php echo date('h:i A', strtotime($inv['created_at'])); ?></td>
+                                                                <td class="text-end"><?php echo format_money($inv['total_amount']); ?></td>
+                                                                <td class="text-end text-danger">-<?php echo format_money($inv['final_discount_amount']); ?></td>
+                                                                <td class="text-end pe-3 fw-bold"><?php echo format_money($net); ?></td>
+                                                            </tr>
+                                                            <?php endforeach; ?>
+                                                        <?php endif; ?>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </td>
                                 </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
@@ -263,6 +257,7 @@ $grand_net_profit = $grand_total_profit - $grand_total_beetech - $total_period_e
                         <?php if(!empty($reports)): ?>
                         <tfoot class="bg-light fw-bold">
                             <tr>
+                                <td></td>
                                 <td>TOTAL</td>
                                 <td class="text-center"><?php echo number_format($grand_total_invoices); ?></td>
                                 <td class="text-end"><?php echo format_money($grand_total_revenue); ?></td>
@@ -277,5 +272,22 @@ $grand_net_profit = $grand_total_profit - $grand_total_beetech - $total_period_e
         </div>
     </div>
 </div>
+
+<script>
+function toggleDetails(id) {
+    const row = document.getElementById(id);
+    const icon = document.getElementById('icon-' + id);
+    
+    if (row.classList.contains('d-none')) {
+        row.classList.remove('d-none');
+        icon.classList.remove('fa-chevron-right');
+        icon.classList.add('fa-chevron-down');
+    } else {
+        row.classList.add('d-none');
+        icon.classList.remove('fa-chevron-down');
+        icon.classList.add('fa-chevron-right');
+    }
+}
+</script>
 
 <?php require_once 'includes/footer.php'; ?>

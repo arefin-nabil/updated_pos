@@ -71,7 +71,7 @@ $stats['net_profit'] = $net_profit;
 
 <!-- Stats Grid - Single Row -->
 <div class="row g-3 mb-4 row-cols-1 row-cols-md-5">
-    <!-- Sales Today -->
+    <!-- 1. Sales Today -->
     <div class="col">
         <div class="stat-card h-100">
             <div class="stat-icon bg-purple-light">
@@ -82,18 +82,31 @@ $stats['net_profit'] = $net_profit;
         </div>
     </div>
 
-    <!-- Sales Month -->
+    <!-- 2. Gross Profit Today (100%) -->
     <div class="col">
         <div class="stat-card h-100">
             <div class="stat-icon bg-blue-light">
                 <i class="fas fa-chart-line"></i>
             </div>
-            <h6 class="text-secondary text-uppercase small fw-bold">Sales Month</h6>
-            <h3 class="fw-bold mb-0"><?php echo format_money($stats['sales_month']); ?></h3>
+            <h6 class="text-secondary text-uppercase small fw-bold">Gross Profit Today</h6>
+            <h3 class="fw-bold mb-0 text-success"><?php echo format_money($gross_profit); ?></h3>
         </div>
     </div>
 
-    <!-- Low Stock -->
+    <!-- 3. Net Profit Today -->
+    <div class="col">
+        <div class="stat-card h-100">
+            <div class="stat-icon bg-success text-white" style="opacity: 0.8;">
+                <i class="fas fa-wallet"></i>
+            </div>
+            <h6 class="text-secondary text-uppercase small fw-bold">Net Profit Today</h6>
+            <h3 class="fw-bold mb-0 <?php echo ($net_profit >= 0) ? 'text-white' : 'text-danger'; ?>">
+                <?php echo format_money($net_profit); ?>
+            </h3>
+        </div>
+    </div>
+
+    <!-- 4. Low Stock -->
     <div class="col">
         <div class="stat-card h-100 border <?php echo ($stats['low_stock'] > 0) ? 'border-danger' : ''; ?>">
             <div class="stat-icon bg-orange-light">
@@ -106,7 +119,7 @@ $stats['net_profit'] = $net_profit;
         </div>
     </div>
 
-    <!-- Customers -->
+    <!-- 5. Customers -->
     <div class="col">
         <div class="stat-card h-100">
             <div class="stat-icon bg-green-light">
@@ -116,26 +129,24 @@ $stats['net_profit'] = $net_profit;
             <h3 class="fw-bold mb-0"><?php echo $stats['total_customers']; ?></h3>
         </div>
     </div>
-
-    <!-- Net Profit Today -->
-    <div class="col">
-        <div class="stat-card h-100">
-            <div class="stat-icon bg-success text-white" style="opacity: 0.8;">
-                <i class="fas fa-wallet"></i>
-            </div>
-            <h6 class="text-secondary text-uppercase small fw-bold">Net Profit Today</h6>
-            <h3 class="fw-bold mb-0 <?php echo ($net_profit >= 0) ? 'text-success' : 'text-danger'; ?>">
-                <?php echo format_money($net_profit); ?>
-            </h3>
-        </div>
-    </div>
 </div>
 
-<!-- Recent Sales & Low Stock Row -->
-<div class="row g-4">
-    <!-- Recent Sales -->
+<?php
+// Fetch Recent Sales (Fix: This was missing, causing "No sales yet")
+$stmt = $pdo->query("SELECT s.*, c.name as customer_name FROM sales s LEFT JOIN customers c ON s.customer_id = c.id ORDER BY s.created_at DESC LIMIT 5");
+$recent_sales = $stmt->fetchAll();
+
+// Recent Expenses
+$stmt = $pdo->query("SELECT * FROM expenses ORDER BY expense_date DESC, id DESC LIMIT 5");
+$recent_expenses = $stmt->fetchAll();
+?>
+
+<!-- Main Content Grid -->
+<div class="row g-4 mb-4">
+    <!-- Left Column: Recent Sales & Expenses -->
     <div class="col-lg-8">
-        <div class="card glass-panel border-0 mb-4 h-100">
+        <!-- Recent Sales -->
+        <div class="card glass-panel border-0 mb-4">
             <div class="card-header bg-transparent border-0 py-3 d-flex justify-content-between align-items-center">
                 <h5 class="fw-bold mb-0 text-primary"><i class="fas fa-history me-2"></i>Recent Sales</h5>
                 <a href="sales.php" class="btn btn-sm btn-light">View All</a>
@@ -146,9 +157,9 @@ $stats['net_profit'] = $net_profit;
                         <thead class="bg-light">
                             <tr>
                                 <th class="ps-4">Invoice</th>
-                                <th>Customer</th>
-                                <th>Amount</th>
                                 <th>Date</th>
+                                <th class="text-end">Total</th>
+                                <th class="text-end">Points/Disc</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -159,9 +170,17 @@ $stats['net_profit'] = $net_profit;
                                 <?php foreach($recent_sales as $sale): ?>
                                 <tr>
                                     <td class="ps-4 font-monospace"><?php echo $sale['invoice_no']; ?></td>
-                                    <td class="fw-medium"><?php echo htmlspecialchars($sale['customer_name'] ?? 'Walk-in'); ?></td>
-                                    <td class="fw-bold"><?php echo format_money($sale['total_amount']); ?></td>
                                     <td class="small text-secondary"><?php echo date('d M, h:i A', strtotime($sale['created_at'])); ?></td>
+                                    <td class="fw-bold text-end"><?php echo format_money($sale['total_amount']); ?></td>
+                                    <td class="text-end text-success">
+                                        <?php 
+                                        if($sale['final_discount_amount'] > 0) {
+                                            echo format_money($sale['final_discount_amount']);
+                                        } else {
+                                            echo '-';
+                                        }
+                                        ?>
+                                    </td>
                                     <td>
                                         <a href="invoice.php?id=<?php echo $sale['id']; ?>" class="btn btn-sm btn-outline-primary"><i class="fas fa-print"></i></a>
                                     </td>
@@ -173,17 +192,51 @@ $stats['net_profit'] = $net_profit;
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Low Stock (Moved here to share row) -->
-    <div class="col-lg-4">
-        <?php if($stats['low_stock'] > 0): ?>
-        <div class="card glass-panel border-0 mb-4 h-100">
-            <div class="card-header bg-transparent border-0 py-3">
-                <h5 class="fw-bold mb-0 text-danger"><i class="fas fa-exclamation-circle me-2"></i>Low Stock</h5>
+        <!-- Recent Expenses -->
+        <div class="card glass-panel border-0 mb-4">
+            <div class="card-header bg-transparent border-0 py-3 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0 text-danger"><i class="fas fa-file-invoice-dollar me-2"></i>Recent Expenses</h5>
+                <a href="expenses.php" class="btn btn-sm btn-light">View All</a>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">Title</th>
+                                <th>Date</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($recent_expenses)): ?>
+                            <tr><td colspan="3" class="text-center py-4 text-muted">No expenses recorded</td></tr>
+                            <?php else: ?>
+                                <?php foreach($recent_expenses as $ex): ?>
+                                <tr>
+                                    <td class="ps-4 fw-medium"><?php echo htmlspecialchars($ex['title']); ?></td>
+                                    <td class="small text-secondary"><?php echo date('d M Y', strtotime($ex['expense_date'])); ?></td>
+                                    <td class="fw-bold text-end text-danger"><?php echo format_money($ex['amount']); ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Low Stock -->
+    <div class="col-lg-4">
+        <?php if($stats['low_stock'] > 0): ?>
+        <div class="card glass-panel border-0 mb-4">
+             <div class="card-header bg-transparent border-0 py-3">
+                <h5 class="fw-bold mb-0 text-warning"><i class="fas fa-exclamation-circle me-2"></i>Low Stock Alert</h5>
+            </div>
+            <div class="card-body p-0">
+                 <div class="table-responsive">
                     <table class="table table-hover mb-0 align-middle">
                         <thead class="bg-light">
                             <tr>
@@ -194,23 +247,31 @@ $stats['net_profit'] = $net_profit;
                         </thead>
                         <tbody>
                             <?php
-                            $stmt = $pdo->query("SELECT * FROM products WHERE stock_qty <= alert_threshold ORDER BY stock_qty ASC LIMIT 5");
+                            $stmt = $pdo->query("SELECT * FROM products WHERE stock_qty <= alert_threshold AND is_deleted=0 ORDER BY stock_qty ASC LIMIT 10");
                             while($row = $stmt->fetch()):
                             ?>
                             <tr>
                                 <td class="ps-4">
-                                    <div class="fw-medium text-truncate" style="max-width: 150px;"><?php echo htmlspecialchars($row['name']); ?></div>
-                                    <div class="small text-secondary font-monospace"><?php echo htmlspecialchars($row['barcode']); ?></div>
+                                    <div class="fw-medium text-truncate" style="max-width: 140px;"><?php echo htmlspecialchars($row['name']); ?></div>
+                                    <div class="small font-monospace text-secondary" style="font-size: 0.75rem;"><?php echo htmlspecialchars($row['barcode']); ?></div>
                                 </td>
                                 <td><span class="badge bg-danger rounded-pill"><?php echo $row['stock_qty']; ?></span></td>
                                 <td>
-                                    <a href="products.php" class="btn btn-sm btn-outline-primary"><i class="fas fa-plus"></i></a>
+                                    <a href="products.php" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
                                 </td>
                             </tr>
                             <?php endwhile; ?>
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+        <?php else: ?>
+        <div class="card glass-panel border-0 mb-4 bg-success text-white">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-check-circle fa-3x mb-3 text-white-50"></i>
+                <h5>All Stoked Up!</h5>
+                <p class="small text-white-50 mb-0">No items are currently low on stock.</p>
             </div>
         </div>
         <?php endif; ?>
