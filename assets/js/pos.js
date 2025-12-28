@@ -3,10 +3,16 @@
 let cart = [];
 let products = [];
 let selectedCustomer = null;
+let isManualDiscount = false;
 
 $(document).ready(function () {
     loadProducts(''); // Initial load
     $('#productSearch').focus(); // Auto focus for immediate scanning
+    
+    // Admin Check
+    if (typeof POS_CONFIG !== 'undefined' && POS_CONFIG.user_role === 'admin') {
+        $('#adminOverride').show();
+    }
 
     // Debounce search
     let debounceTimer;
@@ -36,8 +42,6 @@ $(document).ready(function () {
     // Customer Search Setup
     $('#customerSearch').on('input', function () {
         // Simple autocomplete implementation could go here
-        // For now, simpler: user types, if matches found, show dropdown or suggest
-        // Let's us jQuery UI Autocomplete if we had it, but we can do a simple custom one
     });
 
     // We'll use a simple custom implementation for customer search to keep it dependency free
@@ -124,7 +128,7 @@ $(document).ready(function () {
                         if (modal) {
                             modal.hide();
                         } else {
-                            // Fallback if instance not found (shouldn't happen if open)
+                            // Fallback if instance not found
                             const newModal = new bootstrap.Modal(modalEl);
                             newModal.hide();
                         }
@@ -149,21 +153,31 @@ $(document).ready(function () {
             }
         });
     });
+
+    // Admin Override Events
+    $('#manualBeetechToggle').change(function() {
+        isManualDiscount = $(this).is(':checked');
+        if (isManualDiscount) {
+            $('#manualBeetechInputBox').slideDown();
+        } else {
+            $('#manualBeetechInputBox').slideUp();
+            $('#manualDiscount').val(''); // clear input
+        }
+        renderCart(); // Re-calc points based on toggle
+    });
+
+    $('#manualDiscount').on('input', function() {
+        renderCart();
+    });
 });
 
 function loadProducts(term) {
-    console.log("Loading products with term:", term);
     $.get('api.php', { action: 'search_products', term: term }, function (res) {
-        console.log("API Response:", res);
         if (res.success) {
             renderProductGrid(res.data);
         } else {
-            console.error("API Error:", res.message);
-            $('#productGrid').html('<div class="col-12 text-center mt-5 text-danger">Error loading products: ' + (res.message || 'Unknown error') + '</div>');
+            $('#productGrid').html('<div class="col-12 text-center mt-5 text-danger">Error loading products</div>');
         }
-    }).fail(function (jqXHR, textStatus, errorThrown) {
-        console.error("AJAX Fail:", textStatus, errorThrown);
-        $('#productGrid').html('<div class="col-12 text-center mt-5 text-danger">Connection Failed. Check console.</div>');
     });
 }
 
@@ -172,11 +186,6 @@ function fetchProductByBarcode(barcode) {
         if (res.success && res.found) {
             addToCart(res.data);
             $('#productSearch').val('').focus(); // Clear and Keep Focus for next scan
-        } else {
-            // If search was generic and not found, loadProducts is already handling it via input event
-            if (!res.found && barcode.length > 5) {
-                // alert('Product not found with barcode: ' + barcode);
-            }
         }
     });
 }
@@ -264,16 +273,13 @@ function renderCart() {
     }
 
     let total = 0;
-    let totalDiscount = 0; // Accumulated beetech discount (Profit/2)
+    
+    // Config: 5% of purchase value
+    let sharePercent = (typeof POS_CONFIG !== 'undefined') ? POS_CONFIG.profit_share_percent : 0.05;
 
     cart.forEach(item => {
         let lineTotal = item.sell_price * item.qty;
         total += lineTotal;
-
-        let profit = (item.sell_price - item.buy_price) * item.qty;
-        // Use injected config or default to 0.5
-        let sharePercent = (typeof POS_CONFIG !== 'undefined') ? POS_CONFIG.profit_share_percent : 0.5;
-        totalDiscount += (profit * sharePercent);
 
         let row = $(`
             <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
@@ -299,8 +305,20 @@ function renderCart() {
     $('#cartSubtotal').text(total.toFixed(2));
 
     // Calculate Est Points
+    let discountAmount = 0;
+
+    if (isManualDiscount) {
+        let manualVal = parseFloat($('#manualDiscount').val());
+        if (!isNaN(manualVal) && manualVal >= 0) {
+            discountAmount = manualVal;
+        }
+    } else {
+        // Auto: 5% of total
+        discountAmount = total * sharePercent;
+    }
+
     // 6 Tk Discount = 1 Point
-    let estPoints = totalDiscount / 6;
+    let estPoints = discountAmount / 6;
     $('#estPoints').text(estPoints.toFixed(2));
 
     // Enable checkout only if customer selected
@@ -351,6 +369,14 @@ function processCheckout() {
         cart: cart.map(i => ({ id: i.id, qty: i.qty }))
     };
 
+    // If manual discount enabled, send it
+    if (isManualDiscount) {
+        let manualVal = parseFloat($('#manualDiscount').val());
+        if (!isNaN(manualVal) && manualVal >= 0) {
+            payload.manual_discount = manualVal;
+        }
+    }
+
     $.ajax({
         url: 'api.php?action=checkout',
         type: 'POST',
@@ -359,7 +385,6 @@ function processCheckout() {
         success: function (res) {
             if (res.success) {
                 // Success! Redirect to invoice or show success modal
-                // For now, redirect to invoice
                 window.location.href = 'invoice.php?id=' + res.sale_id;
             } else {
                 alert('Error: ' + res.message);

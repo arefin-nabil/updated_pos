@@ -35,26 +35,26 @@ $stats['sales_today'] = $stmt->fetchColumn() ?: 0;
 $stmt = $pdo->query("SELECT SUM(total_amount) FROM sales WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())");
 $stats['sales_month'] = $stmt->fetchColumn() ?: 0;
 
-// Today's Profit (50% Share)
+// 1. Profit (Sell - Buy)
 $stmt = $pdo->query("
     SELECT SUM((si.unit_sell_price - si.unit_buy_price) * si.quantity) 
     FROM sale_items si
     JOIN sales s ON si.sale_id = s.id 
     WHERE DATE(s.created_at) = CURDATE()
 ");
-$total_profit_today = $stmt->fetchColumn() ?: 0;
-$stats['profit_share'] = $total_profit_today * 0.50;
+$gross_profit = $stmt->fetchColumn() ?: 0;
 
-// Recent Sales
-$stmt = $pdo->query("
-    SELECT s.*, c.name as customer_name 
-    FROM sales s 
-    LEFT JOIN customers c ON s.customer_id = c.id 
-    ORDER BY s.created_at DESC 
-    LIMIT 5
-");
-$recent_sales = $stmt->fetchAll();
+// 2. Beetech Given (Discounts)
+$stmt = $pdo->query("SELECT SUM(final_discount_amount) FROM sales WHERE DATE(created_at) = CURDATE()");
+$beetech_given = $stmt->fetchColumn() ?: 0;
 
+// 3. Expenses Today
+$stmt = $pdo->query("SELECT SUM(amount) FROM expenses WHERE expense_date = CURDATE()");
+$expenses_today = $stmt->fetchColumn() ?: 0;
+
+// Net Profit
+$net_profit = $gross_profit - $beetech_given - $expenses_today;
+$stats['net_profit'] = $net_profit;
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -69,11 +69,11 @@ $recent_sales = $stmt->fetchAll();
     </div>
 </div>
 
-<!-- Stats Grid -->
-<div class="row g-4 mb-4">
+<!-- Stats Grid - Single Row -->
+<div class="row g-3 mb-4 row-cols-1 row-cols-md-5">
     <!-- Sales Today -->
-    <div class="col-md-6 col-lg-3">
-        <div class="stat-card">
+    <div class="col">
+        <div class="stat-card h-100">
             <div class="stat-icon bg-purple-light">
                 <i class="fas fa-coins"></i>
             </div>
@@ -83,48 +83,50 @@ $recent_sales = $stmt->fetchAll();
     </div>
 
     <!-- Sales Month -->
-    <div class="col-md-6 col-lg-3">
-        <div class="stat-card">
+    <div class="col">
+        <div class="stat-card h-100">
             <div class="stat-icon bg-blue-light">
                 <i class="fas fa-chart-line"></i>
             </div>
-            <h6 class="text-secondary text-uppercase small fw-bold">Sales This Month</h6>
+            <h6 class="text-secondary text-uppercase small fw-bold">Sales Month</h6>
             <h3 class="fw-bold mb-0"><?php echo format_money($stats['sales_month']); ?></h3>
         </div>
     </div>
 
     <!-- Low Stock -->
-    <div class="col-md-6 col-lg-3">
-        <div class="stat-card border <?php echo ($stats['low_stock'] > 0) ? 'border-danger' : ''; ?>">
+    <div class="col">
+        <div class="stat-card h-100 border <?php echo ($stats['low_stock'] > 0) ? 'border-danger' : ''; ?>">
             <div class="stat-icon bg-orange-light">
                 <i class="fas fa-exclamation-triangle"></i>
             </div>
-            <h6 class="text-secondary text-uppercase small fw-bold">Low Stock Alerts</h6>
+            <h6 class="text-secondary text-uppercase small fw-bold">Low Stock</h6>
             <h3 class="fw-bold mb-0 <?php echo ($stats['low_stock'] > 0) ? 'text-danger' : ''; ?>">
-                <?php echo $stats['low_stock']; ?> <span class="fs-6 text-secondary fw-normal">items</span>
+                <?php echo $stats['low_stock']; ?>
             </h3>
         </div>
     </div>
 
     <!-- Customers -->
-    <div class="col-md-6 col-lg-3">
-        <div class="stat-card">
+    <div class="col">
+        <div class="stat-card h-100">
             <div class="stat-icon bg-green-light">
                 <i class="fas fa-users"></i>
             </div>
-            <h6 class="text-secondary text-uppercase small fw-bold">Total Customers</h6>
+            <h6 class="text-secondary text-uppercase small fw-bold">Customers</h6>
             <h3 class="fw-bold mb-0"><?php echo $stats['total_customers']; ?></h3>
         </div>
     </div>
 
-    <!-- Profit Share (50%) -->
-    <div class="col-md-6 col-lg-3">
-        <div class="stat-card">
+    <!-- Net Profit Today -->
+    <div class="col">
+        <div class="stat-card h-100">
             <div class="stat-icon bg-success text-white" style="opacity: 0.8;">
-                <i class="fas fa-hand-holding-dollar"></i>
+                <i class="fas fa-wallet"></i>
             </div>
-            <h6 class="text-secondary text-uppercase small fw-bold">Today's Profit (50%)</h6>
-            <h3 class="fw-bold mb-0 text-success"><?php echo format_money($stats['profit_share']); ?></h3>
+            <h6 class="text-secondary text-uppercase small fw-bold">Net Profit Today</h6>
+            <h3 class="fw-bold mb-0 <?php echo ($net_profit >= 0) ? 'text-success' : 'text-danger'; ?>">
+                <?php echo format_money($net_profit); ?>
+            </h3>
         </div>
     </div>
 </div>

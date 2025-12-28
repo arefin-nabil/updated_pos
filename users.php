@@ -15,9 +15,9 @@ $error_msg = '';
 // Handle Form Submission (Add/Edit)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? 'add';
-    $username = clean_input($_POST['username']);
-    $full_name = clean_input($_POST['full_name']);
-    $role = clean_input($_POST['role']);
+    $username = clean_input($_POST['username'] ?? '');
+    $full_name = clean_input($_POST['full_name'] ?? '');
+    $role = clean_input($_POST['role'] ?? '');
     $password = $_POST['password'] ?? '';
     $id = $_POST['user_id'] ?? null;
 
@@ -69,7 +69,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header("Location: users.php");
                 exit;
             }
-            $stmt = $pdo->prepare("DELETE FROM users WHERE id=?");
+            // Soft Delete
+            $stmt = $pdo->prepare("UPDATE users SET is_deleted=1 WHERE id=?");
             $stmt->execute([$id]);
             set_flash_message('success', 'User deleted successfully!');
             header("Location: users.php");
@@ -86,7 +87,7 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = 10;
 $offset = ($page - 1) * $limit;
 
-$sql = "SELECT id, username, full_name, role, created_at FROM users WHERE username LIKE :s OR full_name LIKE :s ORDER BY id DESC LIMIT :limit OFFSET :offset";
+$sql = "SELECT id, username, full_name, role, created_at FROM users WHERE is_deleted=0 AND (username LIKE :s OR full_name LIKE :s) ORDER BY id DESC LIMIT :limit OFFSET :offset";
 $stmt = $pdo->prepare($sql);
 $stmt->bindValue(':s', "%$search%");
 $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
@@ -95,7 +96,7 @@ $stmt->execute();
 $users = $stmt->fetchAll();
 
 // Total for pagination
-$count_stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE username LIKE :s OR full_name LIKE :s");
+$count_stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE is_deleted=0 AND (username LIKE :s OR full_name LIKE :s)");
 $count_stmt->execute(['s' => "%$search%"]);
 $total_rows = $count_stmt->fetchColumn();
 $total_pages = ceil($total_rows / $limit);

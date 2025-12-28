@@ -19,14 +19,14 @@ try {
     if ($action === 'search_products') {
         $term = clean_input($_GET['term'] ?? '');
         // Search by Name or Barcode
-        $stmt = $pdo->prepare("SELECT * FROM products WHERE (name LIKE :s OR barcode LIKE :s) AND stock_qty > 0 LIMIT 20");
+        $stmt = $pdo->prepare("SELECT * FROM products WHERE (name LIKE :s OR barcode LIKE :s) AND stock_qty > 0 AND is_deleted = 0 LIMIT 20");
         $stmt->execute(['s' => "%$term%"]);
         $products = $stmt->fetchAll();
         echo json_encode(['success' => true, 'data' => $products]);
 
     } elseif ($action === 'get_product_by_barcode') {
         $barcode = clean_input($_GET['barcode'] ?? '');
-        $stmt = $pdo->prepare("SELECT * FROM products WHERE barcode = :b");
+        $stmt = $pdo->prepare("SELECT * FROM products WHERE barcode = :b AND is_deleted = 0");
         $stmt->execute(['b' => $barcode]);
         $product = $stmt->fetch();
         if ($product) {
@@ -146,21 +146,26 @@ try {
             $upd->execute([$new_stock, $p_id]);
         }
 
-        // 2. Beetech Rules
-        // Profit = Sell - Buy (Already calculated as $total_profit)
-        // Share of Profit = Beetech Discount
-        $beetech_discount = $total_profit * BEETECH_PROFIT_SHARE_PERCENT;
+        // 2. Beetech Rules (Updated Logic)
+        // New Logic: 5% of Purchase Value (Total Amount)
+        // Admin Override: If 'manual_discount' is sent, use it. Otherwise auto-calc.
+        
+        $final_discount_amount = 0;
+        $manual_discount_input = $input['manual_discount'] ?? null;
+
+        if ($manual_discount_input !== null && is_numeric($manual_discount_input)) {
+            // Admin override
+            $final_discount_amount = (float)$manual_discount_input;
+        } else {
+            // Auto Calculation: 5% of Total Amount
+            $final_discount_amount = $total_amount * 0.05;
+        }
         
         // Point Conversion: 6 TK = 1 Point (from discount amount)
-        // User wants decimal points. 
-        // e.g. 4.50 tk discount / 6 = 0.75 points
-        // 7.50 / 6 = 1.25 points
-        $points_earned = $beetech_discount / 6;
-        $points_earned = round($points_earned, 2); // Round to 2 decimals for cleaner storage
+        $points_earned = $final_discount_amount / 6;
+        $points_earned = round($points_earned, 2); 
 
         // 3. Create Invoice
-        $invoice_no = 'INV-' . strtoupper(generate_random_string(6)); // Or sequential
-        // Sequential is better for POS usually, let's try MAX id + 1 technique or just timestamp + random
         $invoice_no = date('YmdHis') . rand(10,99);
 
         $stmt = $pdo->prepare("INSERT INTO sales (invoice_no, customer_id, user_id, total_amount, final_discount_amount, points_earned, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
@@ -169,7 +174,7 @@ try {
             $customer_id,
             $_SESSION['user_id'],
             $total_amount,
-            $beetech_discount,
+            $final_discount_amount,
             $points_earned
         ]);
         $sale_id = $pdo->lastInsertId();

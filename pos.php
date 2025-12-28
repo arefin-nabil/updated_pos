@@ -9,7 +9,8 @@ require_once 'includes/header.php';
 ?>
 <script>
     const POS_CONFIG = {
-        profit_share_percent: <?php echo BEETECH_PROFIT_SHARE_PERCENT; ?>
+        profit_share_percent: 0.05, // Now used as Purchase Share (5%)
+        user_role: '<?php echo $_SESSION['role'] ?? 'salesman'; ?>'
     };
 </script>
 <div class="pos-layout">
@@ -77,9 +78,22 @@ require_once 'includes/header.php';
                 <span class="text-secondary">Subtotal</span>
                 <span class="fw-bold" id="cartSubtotal">0.00</span>
             </div>
-            <div class="d-flex justify-content-between mb-3">
                 <span class="text-secondary">Beetech Review</span>
                 <small class="text-success"><i class="fas fa-gift me-1"></i> Points: <span id="estPoints">0</span></small>
+            </div>
+            
+            <!-- Admin Override Section -->
+            <div class="mb-3" id="adminOverride" style="display: none;">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="manualBeetechToggle">
+                    <label class="form-check-label small text-secondary" for="manualBeetechToggle">Admin Override (Manual Discount)</label>
+                </div>
+                <div class="mt-2" id="manualBeetechInputBox" style="display: none;">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text">BDT</span>
+                        <input type="number" id="manualDiscount" class="form-control" placeholder="Enter Discount Amount" min="0" step="0.01">
+                    </div>
+                </div>
             </div>
             <div class="d-flex justify-content-between align-items-center pt-3 border-top">
                 <h4 class="fw-bold mb-0 text-primary">Total</h4>

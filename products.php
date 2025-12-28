@@ -15,8 +15,8 @@ $error_msg = '';
 // Handle Form Submission (Add/Edit)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? 'add';
-    $name = clean_input($_POST['name']);
-    $barcode = clean_input($_POST['barcode']);
+    $name = clean_input($_POST['name'] ?? '');
+    $barcode = clean_input($_POST['barcode'] ?? '');
     $buy_price = floatval($_POST['buy_price']);
     $sell_price = floatval($_POST['sell_price']);
     $stock_qty = intval($_POST['stock_qty']);
@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($action === 'delete' && $id) {
          try {
-            $stmt = $pdo->prepare("DELETE FROM products WHERE id=?");
+            $stmt = $pdo->prepare("UPDATE products SET is_deleted=1 WHERE id=?");
             $stmt->execute([$id]);
             set_flash_message('success', 'Product deleted successfully!');
             header("Location: products.php");
@@ -62,7 +62,7 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = 10;
 $offset = ($page - 1) * $limit;
 
-$sql = "SELECT * FROM products WHERE name LIKE :s OR barcode LIKE :s ORDER BY id DESC LIMIT :limit OFFSET :offset";
+$sql = "SELECT * FROM products WHERE is_deleted=0 AND (name LIKE :s OR barcode LIKE :s) ORDER BY id DESC LIMIT :limit OFFSET :offset";
 $stmt = $pdo->prepare($sql);
 $stmt->bindValue(':s', "%$search%");
 $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
@@ -71,7 +71,7 @@ $stmt->execute();
 $products = $stmt->fetchAll();
 
 // Total for pagination
-$count_stmt = $pdo->prepare("SELECT COUNT(*) FROM products WHERE name LIKE :s OR barcode LIKE :s");
+$count_stmt = $pdo->prepare("SELECT COUNT(*) FROM products WHERE is_deleted=0 AND (name LIKE :s OR barcode LIKE :s)");
 $count_stmt->execute(['s' => "%$search%"]);
 $total_rows = $count_stmt->fetchColumn();
 $total_pages = ceil($total_rows / $limit);
