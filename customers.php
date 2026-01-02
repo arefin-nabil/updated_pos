@@ -312,8 +312,74 @@ $total_pages = ceil($total_rows / $limit);
 <script>
 // ... Existing JS search logic ...
 // We need to update search logic to include new columns if we want dynamic update
-// For brevity, skipping full dynamic rewrite of table unless requested, but user asked for "see report by customer"
-// The PHP loop above handles the main view.
+$(document).ready(function() {
+    let debounceTimer;
+    $('#searchInput').on('input', function() {
+        clearTimeout(debounceTimer);
+        let term = $(this).val();
+        
+        if(term.length === 0) {
+           $('#paginationNav').show();
+           // Optional: Reload page or just show current table if we stored it? 
+           // Simplest: just reload or let user refresh. Or query empty term to get defaults?
+           // Actually, query empty term returns first 20.
+        } else {
+           $('#paginationNav').hide();
+        }
+
+        debounceTimer = setTimeout(function() {
+            $.get('api.php', { action: 'search_customers', term: term }, function(res) {
+                if(res.success) {
+                    let rows = '';
+                    if(res.data.length === 0) {
+                         rows = '<tr><td colspan="6" class="text-center text-muted">No customers found</td></tr>';
+                    } else {
+                        res.data.forEach(c => {
+                            // Safe JSON for onclick
+                            let cJson = JSON.stringify(c).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+                            
+                            let beetech = c.beetech_id ? 
+                                `<span class="badge bg-primary px-2 rounded-pill" style="letter-spacing: 0.5px;">${c.beetech_id}</span>` : 
+                                `<span class="text-muted small">N/A</span>`;
+
+                            let spend = parseFloat(c.total_spend || 0).toFixed(2);
+                            let points = parseFloat(c.total_points || 0).toFixed(2);
+
+                            rows += `<tr>
+                                <td>${c.id}</td>
+                                <td class="fw-medium">
+                                    ${c.name}
+                                    <div class="small text-muted d-block d-md-none">${c.mobile}</div>
+                                </td>
+                                <td class="d-none d-md-table-cell">${c.mobile}</td>
+                                <td>${beetech}</td>
+                                <td>
+                                    <div class="small fw-bold">৳${spend}</div>
+                                    <div class="small text-success"><i class="fas fa-star text-warning"></i> ${points} pts</div>
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-info" title="ID Card" onclick='showCard(${cJson})'>
+                                            <i class="fas fa-id-card"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary" title="History" onclick='showHistory(${c.id}, "${c.name.replace(/'/g, "\\'")}")'>
+                                            <i class="fas fa-history"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-primary" title="Edit" onclick='editCustomer(${cJson})'>
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>`;
+                        });
+                    }
+                    $('#customersTableBody').html(rows);
+                }
+            });
+        }, 300);
+    });
+});
+
 
 function resetForm() {
     document.getElementById('customerForm').reset();

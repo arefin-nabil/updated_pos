@@ -38,7 +38,14 @@ try {
     } elseif ($action === 'search_customers') {
         $term = clean_input($_GET['term'] ?? '');
         // Search by Mobile, Name, or BeetechID
-        $stmt = $pdo->prepare("SELECT * FROM customers WHERE mobile LIKE :s OR name LIKE :s OR beetech_id LIKE :s LIMIT 20");
+        // We need totals for the table
+        $sql = "SELECT c.*, 
+                (SELECT SUM(s.total_amount) FROM sales s WHERE s.customer_id = c.id) as total_spend,
+                (SELECT SUM(s.points_earned) FROM sales s WHERE s.customer_id = c.id) as total_points
+                FROM customers c 
+                WHERE c.mobile LIKE :s OR c.name LIKE :s OR c.beetech_id LIKE :s 
+                LIMIT 20";
+        $stmt = $pdo->prepare($sql);
         $stmt->execute(['s' => "%$term%"]);
         $customers = $stmt->fetchAll();
         echo json_encode(['success' => true, 'data' => $customers]);
