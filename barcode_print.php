@@ -151,20 +151,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_print'])) {
     
     .barcode-label {
         border: 1px dotted #999;
-        padding: 5px;
+        padding: 2px; /* Reduced padding */
         text-align: center;
         page-break-inside: avoid;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        min-height: 100px;
+        min-height: 80px; /* Reduced min-height */
         break-inside: avoid;
     }
     
     @page {
         size: A4;
-        margin: 10mm;
+        margin: 5mm; /* Reduced print margin */
     }
 }
 
@@ -173,14 +173,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_print'])) {
     font-family: sans-serif;
 }
 .label-name {
-    font-size: 11px;
+    font-size: 10px; /* Smaller font */
     font-weight: bold;
     max-width: 100%;
-    margin-bottom: 2px;
+    margin-bottom: 0;
+    line-height: 1.1;
+}
+.label-shop {
+    font-size: 8px;
+    text-transform: uppercase;
+    margin-bottom: 1px;
+    font-weight: bold;
 }
 .label-price {
-    font-size: 13px;
-    margin-top: 2px;
+    font-size: 12px;
+    margin-top: 0;
+    font-weight: bold;
 }
 </style>
 
@@ -340,8 +348,9 @@ function generatePreview() {
             // Create Label Element
             let label = $(`
                 <div class="barcode-label">
+                    <div class="label-shop"><?php echo APP_NAME; ?></div>
                     ${showName ? `<div class="label-name text-truncate">${item.name}</div>` : ''}
-                    <svg class="barcode-svg" jsbarcode-value="${item.barcode}" jsbarcode-format="EAN13" jsbarcode-width="1.5" jsbarcode-height="40" jsbarcode-fontSize="12"></svg>
+                    <svg class="barcode-svg" jsbarcode-value="${item.barcode}" jsbarcode-format="EAN13" jsbarcode-width="1.4" jsbarcode-height="30" jsbarcode-fontSize="10" jsbarcode-margin="2"></svg>
                     ${showPrice ? `<div class="label-price fw-bold text-center">` + "<?php echo CURRENCY; ?>" + item.price + `</div>` : ''}
                 </div>
             `);

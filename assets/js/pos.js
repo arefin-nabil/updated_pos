@@ -34,8 +34,27 @@ $(document).ready(function () {
     $('#productSearch').on('keypress', function (e) {
         if (e.which == 13) {
             let val = $(this).val();
-            // Try barcode first
-            fetchProductByBarcode(val);
+            // 1. Try Product Barcode first
+            $.get('api.php', { action: 'get_product_by_barcode', barcode: val }, function (res) {
+                if (res.success && res.found) {
+                    addToCart(res.data);
+                    $('#productSearch').val('').focus();
+                    $('#searchResults').hide();
+                } else {
+                    // 2. If not product, try Customer ID (assuming 5-7 digits)
+                    if (val.length >= 5 && val.length <= 11) { // Mobile or Custom ID
+                        $.get('api.php', { action: 'get_customer_by_id', id: val }, function (cRes) {
+                            if (cRes.success && cRes.found) {
+                                selectCustomer(cRes.data);
+                                $('#productSearch').val('').focus();
+                                alert('Customer Detected: ' + cRes.data.name);
+                            } else {
+                                alert('No product or customer found with this code.');
+                            }
+                        });
+                    }
+                }
+            });
         }
     });
 
@@ -358,16 +377,59 @@ function clearCustomer() {
     renderCart();
 }
 
+
 function processCheckout() {
     if (!selectedCustomer || cart.length === 0) return;
 
-    let btn = $('#checkoutBtn');
+    // Open Payment Modal
+    $('#payTotal').text($('#cartTotal').text());
+    $('#payGiven').val('');
+    $('#payChange').text('0.00');
+
+    // Auto-focus input when modal opens
+    let myModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+    myModal.show();
+
+    setTimeout(() => {
+        $('#payGiven').focus();
+    }, 500);
+}
+
+function calcChange() {
+    let total = parseFloat($('#payTotal').text());
+    let given = parseFloat($('#payGiven').val());
+
+    if (isNaN(given)) given = 0;
+
+    let change = given - total;
+    $('#payChange').text(change.toFixed(2));
+
+    if (change < 0) {
+        $('#payChange').addClass('text-danger').removeClass('text-success');
+    } else {
+        $('#payChange').addClass('text-success').removeClass('text-danger');
+    }
+}
+
+function confirmCheckout() {
+    let given = parseFloat($('#payGiven').val());
+    let total = parseFloat($('#payTotal').text());
+
+    if (isNaN(given) || given < total) {
+        if (!confirm('Cash received is less than total! Continue anyway?')) {
+            return;
+        }
+    }
+
+    let btn = $('#confirmPayBtn');
     let originalText = btn.html();
     btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
 
     let payload = {
         customer_id: selectedCustomer.id,
-        cart: cart.map(i => ({ id: i.id, qty: i.qty }))
+        cart: cart.map(i => ({ id: i.id, qty: i.qty })),
+        paid_amount: given,
+        change_amount: parseFloat($('#payChange').text())
     };
 
     // If manual discount enabled, send it
@@ -386,7 +448,8 @@ function processCheckout() {
         success: function (res) {
             if (res.success) {
                 // Success! Redirect to invoice or show success modal
-                window.location.href = 'invoice.php?id=' + res.sale_id;
+                let autoPrint = $('#autoPrint').is(':checked');
+                window.location.href = 'invoice.php?id=' + res.sale_id + (autoPrint ? '&autoprint=1' : '');
             } else {
                 alert('Error: ' + res.message);
                 btn.prop('disabled', false).html(originalText);

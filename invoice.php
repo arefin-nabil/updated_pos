@@ -163,10 +163,13 @@ foreach($items as $i) {
             }
             body {
                 background: white;
+                margin: 0;
+                padding: 0;
             }
             .wrapper {
                 display: block;
                 padding: 0;
+                margin: 0;
                 min-height: auto;
             }
             .screen-actions, .no-print {
@@ -177,6 +180,10 @@ foreach($items as $i) {
                 max-width: 100%; /* Full width of paper */
                 box-shadow: none;
                 padding: 0 2px; /* Safety margin */
+                margin: 0;
+            }
+            .header {
+                margin-top: 5px; /* Minimal top margin */
             }
         }
     </style>
@@ -219,32 +226,44 @@ foreach($items as $i) {
 
         <!-- Items Head -->
         <div class="items-header" style="display: flex; width: 100%; border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 5px;">
+            <span style="width: 5%; text-align: center;">SL</span>
             <span style="flex: 1;">Item</span>
-            <span style="width: 10%; text-align: center;">Qty</span>
-            <span style="width: 20%; text-align: right;">Price</span>
-            <span style="width: 20%; text-align: right;">Total</span>
+            <span style="width: 8%; text-align: center;">Qty</span>
+            <span style="width: 15%; text-align: right;">Price</span>
+            <span style="width: 18%; text-align: right;">Total</span>
         </div>
 
         <!-- Items Loop -->
-        <?php foreach($items as $item): ?>
+        <?php $sl = 1; foreach($items as $item): ?>
         <div class="item-row" style="display: flex; width: 100%; margin-bottom: 5px;">
+            <span style="width: 5%; text-align: center;"><?php echo $sl++; ?>.</span>
             <span style="flex: 1; padding-right: 5px; word-wrap: break-word;"><?php echo htmlspecialchars($item['name']); ?></span>
-            <span style="width: 10%; text-align: center; white-space: nowrap;"><?php echo $item['quantity']; ?></span>
-            <span style="width: 20%; text-align: right; white-space: nowrap;"><?php echo number_format($item['unit_sell_price'], 2); ?></span>
-            <span style="width: 20%; text-align: right; white-space: nowrap; font-weight: bold;"><?php echo number_format($item['subtotal'], 2); ?></span>
+            <span style="width: 8%; text-align: center; white-space: nowrap;"><?php echo $item['quantity']; ?></span>
+            <span style="width: 15%; text-align: right; white-space: nowrap;"><?php echo number_format($item['unit_sell_price'], 2); ?></span>
+            <span style="width: 18%; text-align: right; white-space: nowrap; font-weight: bold;"><?php echo number_format($item['subtotal'], 2); ?></span>
         </div>
         <?php endforeach; ?>
 
         <div class="divider-solid"></div>
 
         <!-- Totals -->
-        <div class="totals">
             <!-- Grand Total -->
             <div class="total-row grand-total">
                 <span>TOTAL:</span>
                 <span><?php echo number_format($sale['total_amount'], 2); ?></span>
             </div>
-        </div>
+            
+            <div class="divider-solid" style="margin: 5px 0; opacity: 0.5;"></div>
+
+             <!-- Paid & Change -->
+            <div class="total-row">
+                <span>Paid:</span>
+                <span><?php echo number_format($sale['paid_amount'] ?? 0, 2); ?></span>
+            </div>
+            <div class="total-row">
+                <span>Change:</span>
+                <span><?php echo number_format($sale['change_amount'] ?? 0, 2); ?></span>
+            </div>
 
         <!-- Beetech -->
         <?php if($sale['points_earned'] > 0 || !empty($sale['beetech_id'])): ?>
@@ -266,8 +285,24 @@ foreach($items as $i) {
 </div>
 
 <script>
-// Auto print if ?autoprint=1 is passed (optional feature for future)
-// window.onload = function() { window.print(); }
+// Auto print logic
+<?php if(isset($_GET['autoprint'])): ?>
+window.onload = function() { 
+    window.print(); 
+    // Optional: Focus the window after print dialog closes (browser dependent)
+    window.focus();
+}
+<?php endif; ?>
+
+// Keyboard shortcut: 'N' for New Sale, 'P' for Print
+document.addEventListener('keydown', function(event) {
+    if(event.key === 'n' || event.key === 'N') {
+        window.location.href = 'pos.php';
+    }
+    if(event.key === 'p' || event.key === 'P') {
+        window.print();
+    }
+});
 </script>
 
 </body>

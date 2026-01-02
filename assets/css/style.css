@@ -83,6 +83,9 @@ body {
     background: #ffffff;
     border-right: 1px solid #e5e7eb;
     z-index: 1000;
+    overflow-y: auto; /* Allow scrolling */
+    display: flex;
+    flex-direction: column;
 }
 
 .main-content {

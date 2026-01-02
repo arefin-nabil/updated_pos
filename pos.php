@@ -78,8 +78,16 @@ require_once 'includes/header.php';
                 <span class="text-secondary">Subtotal</span>
                 <span class="fw-bold" id="cartSubtotal">0.00</span>
             </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
                 <span class="text-secondary">Beetech Review</span>
-                <small class="text-success"><i class="fas fa-gift me-1"></i> Points: <span id="estPoints">0</span> <span class="text-secondary fw-bold ms-1" style="font-size: 0.9em;">(৳<span id="estAmount">0.00</span>)</span></small>
+                <div class="form-check form-switch mb-0" title="Automatically open print dialog after checkout">
+                    <input class="form-check-input" type="checkbox" id="autoPrint" checked>
+                    <label class="form-check-label small text-muted" for="autoPrint">Auto Print</label>
+                </div>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-secondary small">Points Earned</span>
+                <small class="text-success fw-bold"><i class="fas fa-gift me-1"></i> <span id="estPoints">0</span> <span class="text-secondary fw-normal ms-1" style="font-size: 0.85em;">(৳<span id="estAmount">0.00</span>)</span></small>
             </div>
             
             <!-- Admin Override Section -->
@@ -146,6 +154,41 @@ require_once 'includes/header.php';
     </div>
 </div>
 
+
+<!-- Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-panel border-0">
+            <div class="modal-header border-bottom-0">
+                <h5 class="modal-title fw-bold text-primary">Confirm Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-4">
+                    <div class="text-secondary small text-uppercase">Total Payable</div>
+                    <div class="display-4 fw-bold text-primary">৳<span id="payTotal">0.00</span></div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-uppercase text-secondary">Cash Received</label>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-white border-end-0">৳</span>
+                        <input type="number" id="payGiven" class="form-control border-start-0 fw-bold" placeholder="0.00" oninput="calcChange()">
+                    </div>
+                </div>
+                
+                <div class="p-3 bg-light rounded text-center mb-3">
+                    <div class="text-secondary small text-uppercase">Change Return</div>
+                    <div class="h3 fw-bold mb-0 text-success">৳<span id="payChange">0.00</span></div>
+                </div>
+                
+                <button class="btn btn-primary btn-lg w-100 rounded-pill py-3" onclick="confirmCheckout()" id="confirmPayBtn">
+                    <i class="fas fa-print me-2"></i> Confirm & Print
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php require_once 'includes/footer.php'; ?>
 <script src="assets/js/pos.js?v=<?php echo time(); ?>"></script>

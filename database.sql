@@ -87,6 +87,8 @@ CREATE TABLE `sales` (
   `final_discount_amount` decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT 'Total Discount Given',
   `points_earned` decimal(10,2) NOT NULL DEFAULT 0.00,
   `points_given` tinyint(1) NOT NULL DEFAULT 0,
+  `paid_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `change_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `invoice_no` (`invoice_no`),

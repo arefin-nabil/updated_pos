@@ -43,6 +43,40 @@ try {
         $customers = $stmt->fetchAll();
         echo json_encode(['success' => true, 'data' => $customers]);
 
+    } elseif ($action === 'get_customer_by_id') {
+        $id = clean_input($_GET['id'] ?? '');
+        // Search by BeetechID or Database ID or Mobile
+        // If it's a barcode scan, it might be the Beetech ID (string)
+        $stmt = $pdo->prepare("SELECT * FROM customers WHERE beetech_id = :id OR id = :id OR mobile = :id");
+        $stmt->execute(['id' => $id]);
+        $customer = $stmt->fetch();
+        
+        if ($customer) {
+            echo json_encode(['success' => true, 'found' => true, 'data' => $customer]);
+        } else {
+            echo json_encode(['success' => true, 'found' => false]);
+        }
+
+    } elseif ($action === 'get_customer_history') {
+        $cid = clean_input($_GET['cid'] ?? '');
+        $limit = 50;
+        
+        $stmt = $pdo->prepare("SELECT s.*, (SELECT COUNT(*) FROM sale_items WHERE sale_id = s.id) as item_count 
+                               FROM sales s WHERE customer_id = ? ORDER BY created_at DESC LIMIT $limit");
+        $stmt->execute([$cid]);
+        $sales = $stmt->fetchAll();
+        
+        // Calculate totals
+        $stmtPath = $pdo->prepare("SELECT SUM(total_amount) as total_spend, SUM(points_earned) as total_points FROM sales WHERE customer_id = ?");
+        $stmtPath->execute([$cid]);
+        $totals = $stmtPath->fetch();
+        
+        echo json_encode([
+            'success' => true, 
+            'data' => $sales,
+            'summary' => $totals
+        ]);
+
     } elseif ($action === 'search_sales') {
         $term = clean_input($_GET['term'] ?? '');
         $limit = 20;
@@ -184,18 +218,25 @@ try {
         // Point Conversion: 6 TK = 1 Point (from discount amount)
         $points_earned = $final_discount_amount / 6;
         $points_earned = round($points_earned, 2); 
+        
+        // Payment Info
+        // If not sent, default to total_amount (exact change)
+        $paid_amount = isset($input['paid_amount']) ? (float)$input['paid_amount'] : $total_amount;
+        $change_amount = isset($input['change_amount']) ? (float)$input['change_amount'] : 0.00;
 
         // 3. Create Invoice
         $invoice_no = date('YmdHis') . rand(10,99);
 
-        $stmt = $pdo->prepare("INSERT INTO sales (invoice_no, customer_id, user_id, total_amount, final_discount_amount, points_earned, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
+        $stmt = $pdo->prepare("INSERT INTO sales (invoice_no, customer_id, user_id, total_amount, final_discount_amount, points_earned, paid_amount, change_amount, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
         $stmt->execute([
             $invoice_no,
             $customer_id,
             $_SESSION['user_id'],
             $total_amount,
             $final_discount_amount,
-            $points_earned
+            $points_earned,
+            $paid_amount,
+            $change_amount
         ]);
         $sale_id = $pdo->lastInsertId();
 

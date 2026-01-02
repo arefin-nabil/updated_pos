@@ -44,16 +44,16 @@ $stmt = $pdo->query("
 ");
 $gross_profit = $stmt->fetchColumn() ?: 0;
 
-// 2. Beetech Given (Discounts)
+// 2. Beetech Given (Discounts Today) - used for Net Profit Calc
 $stmt = $pdo->query("SELECT SUM(final_discount_amount) FROM sales WHERE DATE(created_at) = CURDATE()");
-$beetech_given = $stmt->fetchColumn() ?: 0;
+$beetech_given_today = $stmt->fetchColumn() ?: 0;
 
 // 3. Expenses Today
 $stmt = $pdo->query("SELECT SUM(amount) FROM expenses WHERE expense_date = CURDATE()");
 $expenses_today = $stmt->fetchColumn() ?: 0;
 
 // Net Profit
-$net_profit = $gross_profit - $beetech_given - $expenses_today;
+$net_profit = $gross_profit - $beetech_given_today - $expenses_today;
 $stats['net_profit'] = $net_profit;
 ?>
 
@@ -106,7 +106,18 @@ $stats['net_profit'] = $net_profit;
         </div>
     </div>
 
-    <!-- 4. Low Stock -->
+    <!-- 4. Beetech Given (Today) -->
+    <div class="col">
+        <div class="stat-card h-100">
+            <div class="stat-icon bg-green-light">
+                <i class="fas fa-gift"></i>
+            </div>
+            <h6 class="text-secondary text-uppercase small fw-bold">Beetech Given Today</h6>
+            <h3 class="fw-bold mb-0"><?php echo format_money($beetech_given_today); ?></h3>
+        </div>
+    </div>
+
+    <!-- 5. Low Stock -->
     <div class="col">
         <div class="stat-card h-100 border <?php echo ($stats['low_stock'] > 0) ? 'border-danger' : ''; ?>">
             <div class="stat-icon bg-orange-light">
@@ -116,17 +127,6 @@ $stats['net_profit'] = $net_profit;
             <h3 class="fw-bold mb-0 <?php echo ($stats['low_stock'] > 0) ? 'text-danger' : ''; ?>">
                 <?php echo $stats['low_stock']; ?>
             </h3>
-        </div>
-    </div>
-
-    <!-- 5. Customers -->
-    <div class="col">
-        <div class="stat-card h-100">
-            <div class="stat-icon bg-green-light">
-                <i class="fas fa-users"></i>
-            </div>
-            <h6 class="text-secondary text-uppercase small fw-bold">Customers</h6>
-            <h3 class="fw-bold mb-0"><?php echo $stats['total_customers']; ?></h3>
         </div>
     </div>
 </div>
