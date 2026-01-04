@@ -224,3 +224,48 @@ body {
 .fade-in {
     animation: fadeIn 0.4s ease-out forwards;
 }
+
+/* Laptop Responsiveness */
+@media (max-width: 1400px) {
+    .sidebar {
+        width: 200px;
+        padding: 1rem;
+    }
+    .main-content {
+        margin-left: 200px;
+        padding: 1rem;
+    }
+    .nav-link span {
+        font-size: 0.9rem;
+    }
+    .pos-layout {
+        grid-template-columns: 1fr 320px;
+        gap: 0.75rem;
+    }
+    .product-grid {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    }
+}
+
+/* Tablet/Mobile - Stack Layout */
+@media (max-width: 992px) {
+    .sidebar {
+        width: 0;
+        overflow: hidden;
+        padding: 0;
+    }
+    .main-content {
+        margin-left: 0;
+    }
+    .pos-layout {
+        display: block;
+        height: auto;
+    }
+    .product-grid {
+        height: 500px; /* Scrollable area */
+        margin-bottom: 1rem;
+    }
+    .pos-cart-panel {
+        height: auto;
+    }
+}

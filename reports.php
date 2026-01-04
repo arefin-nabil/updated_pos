@@ -38,7 +38,7 @@ $sql_fixed = "
         date_group,
         COUNT(id) as total_invoices,
         SUM(total_amount) as revenue,
-        SUM(final_discount_amount) as discount_given,
+        SUM(points_earned * 6) as beetech_value,
         SUM(sale_profit) as gross_profit
     FROM (
         SELECT 
@@ -46,6 +46,7 @@ $sql_fixed = "
             DATE_FORMAT(s.created_at, '" . ($report_type == 'monthly' ? '%Y-%m-01' : '%Y-%m-%d') . "') as date_group,
             s.total_amount,
             s.final_discount_amount,
+            s.points_earned,
             (SELECT SUM((si.unit_sell_price - si.unit_buy_price) * si.quantity) FROM sale_items si WHERE si.sale_id = s.id) as sale_profit
         FROM sales s
         WHERE $where_sql
@@ -83,7 +84,7 @@ foreach ($reports as $r) {
     $grand_total_revenue += $r['revenue'];
     $grand_total_profit += $r['gross_profit'];
     $grand_total_invoices += $r['total_invoices'];
-    $grand_total_beetech += $r['discount_given'];
+    $grand_total_beetech += $r['beetech_value'];
 }
 
 // Net Profit
@@ -222,7 +223,7 @@ $grand_net_profit = $grand_total_profit - $grand_total_beetech - $total_period_e
                                     <td class="text-center"><?php echo $row['total_invoices']; ?></td>
                                     <td class="text-end fw-bold"><?php echo format_money($row['revenue']); ?></td>
                                     <td class="text-end text-success"><?php echo format_money($row['gross_profit']); ?></td>
-                                    <td class="text-end text-warning"><?php echo format_money($row['discount_given']); ?></td>
+                                    <td class="text-end text-warning"><?php echo format_money($row['beetech_value']); ?></td>
                                 </tr>
                                 <!-- Expanded Row -->
                                 <tr id="details-<?php echo $index; ?>" class="d-none bg-light">
