@@ -286,6 +286,24 @@ body {
     .product-grid {
         grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     }
+
+    /* Hide Images on Laptop to prioritize Text */
+    .product-img-box {
+        display: none !important;
+    }
+
+    .product-details {
+        height: 100px;
+        /* Fixed height for consistency without image */
+        justify-content: center;
+        text-align: center;
+    }
+
+    .product-details .d-flex {
+        justify-content: center !important;
+        margin-top: 0.5rem;
+        gap: 0.5rem;
+    }
 }
 
 /* Tablet/Mobile - Stack Layout */
