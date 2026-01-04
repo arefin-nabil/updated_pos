@@ -189,8 +189,8 @@ foreach($items as $i) {
 
         /* Paid Stamp Style */
         .paid-stamp {
-            border: 3px solid #dc3545;
-            color: #dc3545;
+            border: 3px solid #000;
+            color: #000;
             font-size: 20px;
             font-weight: bold;
             text-transform: uppercase;
