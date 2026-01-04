@@ -25,7 +25,7 @@ require_once 'includes/header.php';
         </div>
 
         <!-- Product Grid -->
-        <div class="product-grid p-1" id="productGrid">
+        <div class="product-grid p-1 flex-grow-1" id="productGrid">
             <!-- Loading state or initial content comes here -->
             <div class="col-12 text-center mt-5 text-muted">
                 <i class="fas fa-spinner fa-spin fa-2x"></i>
