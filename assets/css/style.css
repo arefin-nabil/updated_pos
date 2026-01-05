@@ -182,6 +182,10 @@ body {
     padding-right: 0.5rem;
     min-height: 0;
     /* Critical for Flexbox scrolling */
+    align-content: start;
+    /* Prevent rows from stretching to fill height */
+    grid-auto-rows: min-content;
+    /* Keep rows at minimum height needed */
 }
 
 .product-card {
