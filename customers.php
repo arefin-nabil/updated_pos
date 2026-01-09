@@ -15,12 +15,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = clean_input($_POST['name']);
     $mobile = clean_input($_POST['mobile']);
     $address = clean_input($_POST['address']);
-    $beetech_id = clean_input($_POST['beetech_id']); // Can be empty if auto-generated or optional? User said Create/Edit.
-    $id = $_POST['customer_id'] ?? null;
-
-    // BeetechID optional or unique?
-    // "BeetechID must be highlighted... Customer table has BeetechID"
-    // Assuming it's a manual entry or generated. We will treat as string.
+    // Convert empty Beetech ID to NULL to prevent unique constraint violation on empty strings
+    if (empty($beetech_id)) {
+        $beetech_id = null;
+    }
 
     // Check Duplicate Mobile (if adding or if editing a different ID)
     $checkSql = "SELECT id FROM customers WHERE mobile = ?";
@@ -99,7 +97,15 @@ $total_pages = ceil($total_rows / $limit);
     </button>
 </div>
 
-<?php display_flash_message(); ?>
+<?php 
+display_flash_message(); 
+if (!empty($error_msg)) {
+    echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>' . htmlspecialchars($error_msg) . '
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>';
+}
+?>
 
 <div class="card glass-panel border-0">
     <div class="card-body">
@@ -518,5 +524,7 @@ function showHistory(cid, name) {
 }
 
 
+
+</script>
 
 <?php require_once 'includes/footer.php'; ?>
