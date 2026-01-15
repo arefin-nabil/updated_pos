@@ -75,10 +75,17 @@ $count_stmt = $pdo->prepare("SELECT COUNT(*) FROM products WHERE is_deleted=0 AN
 $count_stmt->execute(['s' => "%$search%"]);
 $total_rows = $count_stmt->fetchColumn();
 $total_pages = ceil($total_rows / $limit);
+
+// Absolute total products count
+$total_all_stmt = $pdo->query("SELECT COUNT(*) FROM products WHERE is_deleted=0");
+$total_all_products = $total_all_stmt->fetchColumn();
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold text-primary">Product Management</h2>
+    <h2 class="fw-bold text-primary">
+        Product Management 
+        <span class="badge bg-secondary fs-5 align-middle ms-2"><?= $total_all_products ?></span>
+    </h2>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#productModal" onclick="resetForm()">
         <i class="fas fa-plus me-2"></i> Add New Product
     </button>
