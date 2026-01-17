@@ -35,11 +35,13 @@ $stats['sales_today'] = $stmt->fetchColumn() ?: 0;
 $stmt = $pdo->query("SELECT SUM(total_amount - final_discount_amount) FROM sales WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())");
 $stats['sales_month'] = $stmt->fetchColumn() ?: 0;
 
-// 1. Profit (Sell - Buy)
+// 1. Profit (Sell - Buy) - Discounts
 $stmt = $pdo->query("
-    SELECT SUM((si.unit_sell_price - si.unit_buy_price) * si.quantity) 
-    FROM sale_items si
-    JOIN sales s ON si.sale_id = s.id 
+    SELECT SUM(
+        (SELECT SUM((si.unit_sell_price - si.unit_buy_price) * si.quantity) FROM sale_items si WHERE si.sale_id = s.id) 
+        - s.final_discount_amount
+    )
+    FROM sales s
     WHERE DATE(s.created_at) = CURDATE()
 ");
 $gross_profit = $stmt->fetchColumn() ?: 0;

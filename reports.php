@@ -47,7 +47,7 @@ $sql_fixed = "
             s.total_amount,
             s.final_discount_amount,
             s.points_earned,
-            (SELECT SUM((si.unit_sell_price - si.unit_buy_price) * si.quantity) FROM sale_items si WHERE si.sale_id = s.id) as sale_profit
+            (SELECT SUM((si.unit_sell_price - si.unit_buy_price) * si.quantity) FROM sale_items si WHERE si.sale_id = s.id) - s.final_discount_amount as sale_profit
         FROM sales s
         WHERE $where_sql
     ) as daily_sales
