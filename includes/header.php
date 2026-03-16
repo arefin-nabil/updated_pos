@@ -34,7 +34,7 @@ $page_title = $page_title ?? APP_NAME;
     <!-- Sidebar -->
     <nav class="sidebar glass-panel border-0 m-0 rounded-0">
         <div class="mb-5 px-2">
-            <a href="dashboard.php" class="text-decoration-none">
+            <a href="pos.php" class="text-decoration-none">
                 <h4 class="fw-bold text-primary"><i class="fas fa-shopping-bag me-2"></i><?php echo APP_NAME; ?></h4>
             </a>
         </div>
